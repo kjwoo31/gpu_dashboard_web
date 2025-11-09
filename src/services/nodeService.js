@@ -1,6 +1,9 @@
+const bcrypt = require('bcrypt');
 const { getAllData, updateNode, updateNodes } = require('../utils/dataService');
 const { logToSend, logToAudit } = require('../utils/logger');
 const { NODE_STATUS } = require('../constants');
+
+const SALT_ROUNDS = 10;
 
 const allocateNode = async (nodeId, userId, password, team) => {
   const data = getAllData();
@@ -14,11 +17,13 @@ const allocateNode = async (nodeId, userId, password, team) => {
     throw new Error('Node is not available');
   }
 
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
   const success = await updateNode(nodeId, {
     status: NODE_STATUS.USED,
     owner: userId,
     team: team || null,
-    password_hash: password
+    password_hash: passwordHash
   });
 
   if (success) {
@@ -41,7 +46,8 @@ const restartNode = async (nodeId, userId, password) => {
     throw new Error('Not authorized - incorrect user ID');
   }
 
-  if (node.password_hash !== password) {
+  const isPasswordValid = await bcrypt.compare(password, node.password_hash);
+  if (!isPasswordValid) {
     throw new Error('Not authorized - incorrect password');
   }
 
@@ -61,7 +67,8 @@ const releaseNode = async (nodeId, userId, password) => {
     throw new Error('Not authorized - incorrect user ID');
   }
 
-  if (node.password_hash !== password) {
+  const isPasswordValid = await bcrypt.compare(password, node.password_hash);
+  if (!isPasswordValid) {
     throw new Error('Not authorized - incorrect password');
   }
 
@@ -92,7 +99,8 @@ const toggleExpandPermission = async (nodeId, userId, password, allowExpand) => 
     throw new Error('Not authorized - incorrect user ID');
   }
 
-  if (node.password_hash !== password) {
+  const isPasswordValid = await bcrypt.compare(password, node.password_hash);
+  if (!isPasswordValid) {
     throw new Error('Not authorized - incorrect password');
   }
 
@@ -117,11 +125,13 @@ const expandNodes = async (userId, password, nodeIds, team) => {
     throw new Error('All nodes must be Free to expand');
   }
 
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
   const success = await updateNodes(nodeIds, {
     status: NODE_STATUS.USED,
     owner: userId,
     team: team || null,
-    password_hash: password
+    password_hash: passwordHash
   });
 
   if (success) {
