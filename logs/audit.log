@@ -1,0 +1,21 @@
+{"ts":"2025-11-07T15:29:47.535Z","actor":"bob","action":"allocate_node","details":{"node_id":"az-01","team":"ML Team"}}
+{"ts":"2025-11-07T15:30:06.175Z","actor":"bob","action":"restart_node","details":{"node_id":"az-01"}}
+{"ts":"2025-11-07T15:30:13.337Z","actor":"bob","action":"toggle_expand","details":{"node_id":"az-01","allow_expand":true}}
+{"ts":"2025-11-07T15:30:19.721Z","actor":"alice","action":"expand_nodes","details":{"node_ids":["az-01","az-02"]}}
+{"ts":"2025-11-07T15:30:30.031Z","actor":"alice","action":"release_node","details":{"node_id":"az-02"}}
+{"ts":"2025-11-07T15:49:42.980Z","actor":"alice","action":"allocate_node","details":{"node_id":"az-01-gpu-0","team":"Test Team"}}
+{"ts":"2025-11-07T15:50:00.542Z","actor":"alice","action":"release_node","details":{"node_id":"az-01-gpu-0"}}
+{"ts":"2025-11-07T16:06:10.227Z","actor":"alice","action":"allocate_node","details":{"node_id":"az-01-gpu-2","team":"Test Team"}}
+{"ts":"2025-11-07T16:06:26.367Z","actor":"alice","action":"allocate_node","details":{"node_id":"az-01-gpu-3","team":"Test Team"}}
+{"ts":"2025-11-07T16:07:22.385Z","actor":"alice","action":"release_node","details":{"node_id":"az-01-gpu-2"}}
+{"ts":"2025-11-07T16:07:29.785Z","actor":"alice","action":"release_node","details":{"node_id":"az-01-gpu-3"}}
+{"ts":"2025-11-07T16:09:31.426Z","actor":"testuser","action":"allocate_node","details":{"node_id":"az-01-gpu-0","team":"TestTeam"}}
+{"ts":"2025-11-07T16:09:40.470Z","actor":"testuser","action":"release_node","details":{"node_id":"az-01-gpu-0"}}
+{"ts":"2025-11-07T16:09:52.345Z","actor":"alice","action":"allocate_node","details":{"node_id":"az-01-gpu-2","team":"Team A"}}
+{"ts":"2025-11-07T16:10:01.210Z","actor":"alice","action":"release_node","details":{"node_id":"az-01-gpu-2"}}
+{"ts":"2025-11-07T16:11:03.873Z","actor":"test","action":"allocate_node","details":{"node_id":"az-01-gpu-6","team":"test"}}
+{"ts":"2025-11-07T16:11:03.890Z","actor":"test","action":"allocate_node","details":{"node_id":"az-01-gpu-7","team":"test"}}
+{"ts":"2025-11-07T16:11:15.480Z","actor":"test","action":"release_node","details":{"node_id":"az-01-gpu-6"}}
+{"ts":"2025-11-07T16:11:25.194Z","actor":"test","action":"toggle_expand","details":{"node_id":"az-01-gpu-7","allow_expand":true}}
+{"ts":"2025-11-07T16:11:50.289Z","actor":"test","action":"toggle_expand","details":{"node_id":"az-01-gpu-7","allow_expand":false}}
+{"ts":"2025-11-07T16:12:17.814Z","actor":"test","action":"release_node","details":{"node_id":"az-01-gpu-7"}}

@@ -1,0 +1,19 @@
+clusters:
+  - id: "azure"
+    name: "Azure GPU Cluster"
+    location: "Azure"
+    notebook_url_template: "https://jupyter.azure.example/{node_id}"
+    grafana_url: ""
+    commands:
+      restart: "azurectl vm restart --node {node_id}"
+      reassign: "kubectl label node {node_id} owner={new_owner} --overwrite"
+      reserve: "echo reserve {node_id} for {requester}"
+  - id: "onprem"
+    name: "On‑prem GPU Cluster"
+    location: "IDC"
+    notebook_url_template: "https://jupyter.onprem.example/{node_id}"
+    grafana_url: ""
+    commands:
+      restart: "ipmitool -H {bmc_ip} -U admin -P ****** power cycle"
+      reassign: "kubectl label node {node_id} owner={new_owner} --overwrite"
+      reserve: "echo reserve {node_id} for {requester}"

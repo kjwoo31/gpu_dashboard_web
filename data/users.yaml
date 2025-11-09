@@ -1,0 +1,18 @@
+users:
+  - id: "alice"
+    name: "Alice Kim"
+    role: "user"
+    password_hash: "$2b$12$N80JOH5todzQBqrYmquSBuTVrJE1MTH20P8JU71cjAlJm3CSPIoD2"  # password: alice123
+    contact: "alice@example.com"
+
+  - id: "bob"
+    name: "Bob Lee"
+    role: "user"
+    password_hash: "$2b$12$5U9WPdUDzhFHa415RAvkeuPVYpVxnGkOO1OnLyyPE5JFDevgBMjn2"  # password: bob123
+    contact: "bob@example.com"
+
+  - id: "admin"
+    name: "Admin"
+    role: "admin"
+    password_hash: "$2b$12$eIU9UmsFGpVKiXI3NEtf5OUMMIclFWU70KFF1jj1uH5bvD67PWX7i"  # password: admin123
+    contact: "admin@example.com"

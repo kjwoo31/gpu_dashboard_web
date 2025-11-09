@@ -1,0 +1,453 @@
+nodes:
+  - node_id: az-01-gpu-0
+    host_id: az-01
+    cluster_id: azure
+    gpu_index: 0
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+    password_hash: null
+  - node_id: az-01-gpu-1
+    host_id: az-01
+    cluster_id: azure
+    gpu_index: 1
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Used
+    owner: alice
+    team: ML Team
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: true
+    last_error: null
+  - node_id: az-01-gpu-2
+    host_id: az-01
+    cluster_id: azure
+    gpu_index: 2
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+    password_hash: null
+  - node_id: az-01-gpu-3
+    host_id: az-01
+    cluster_id: azure
+    gpu_index: 3
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+  - node_id: az-01-gpu-4
+    host_id: az-01
+    cluster_id: azure
+    gpu_index: 4
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Used
+    owner: bob
+    team: AI Team
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+  - node_id: az-01-gpu-5
+    host_id: az-01
+    cluster_id: azure
+    gpu_index: 5
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+  - node_id: az-01-gpu-6
+    host_id: az-01
+    cluster_id: azure
+    gpu_index: 6
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+    password_hash: null
+  - node_id: az-01-gpu-7
+    host_id: az-01
+    cluster_id: azure
+    gpu_index: 7
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+    password_hash: null
+  - node_id: az-02-gpu-0
+    host_id: az-02
+    cluster_id: azure
+    gpu_index: 0
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+  - node_id: az-02-gpu-1
+    host_id: az-02
+    cluster_id: azure
+    gpu_index: 1
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+  - node_id: az-02-gpu-2
+    host_id: az-02
+    cluster_id: azure
+    gpu_index: 2
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+  - node_id: az-02-gpu-3
+    host_id: az-02
+    cluster_id: azure
+    gpu_index: 3
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+  - node_id: az-02-gpu-4
+    host_id: az-02
+    cluster_id: azure
+    gpu_index: 4
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+  - node_id: az-02-gpu-5
+    host_id: az-02
+    cluster_id: azure
+    gpu_index: 5
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+  - node_id: az-02-gpu-6
+    host_id: az-02
+    cluster_id: azure
+    gpu_index: 6
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+  - node_id: az-02-gpu-7
+    host_id: az-02
+    cluster_id: azure
+    gpu_index: 7
+    gpu_model: A100
+    gpu_mem_gb: 80
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: null
+    labels:
+      - A100-80GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-01-gpu-0
+    host_id: op-01
+    cluster_id: onprem
+    gpu_index: 0
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Used
+    owner: alice
+    team: AI Research
+    bmc_ip: 192.168.1.101
+    labels:
+      - A100-40GB
+    allow_expand: true
+    last_error: null
+  - node_id: op-01-gpu-1
+    host_id: op-01
+    cluster_id: onprem
+    gpu_index: 1
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Used
+    owner: alice
+    team: AI Research
+    bmc_ip: 192.168.1.101
+    labels:
+      - A100-40GB
+    allow_expand: true
+    last_error: null
+  - node_id: op-01-gpu-2
+    host_id: op-01
+    cluster_id: onprem
+    gpu_index: 2
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.101
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-01-gpu-3
+    host_id: op-01
+    cluster_id: onprem
+    gpu_index: 3
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.101
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-01-gpu-4
+    host_id: op-01
+    cluster_id: onprem
+    gpu_index: 4
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.101
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-01-gpu-5
+    host_id: op-01
+    cluster_id: onprem
+    gpu_index: 5
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.101
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-01-gpu-6
+    host_id: op-01
+    cluster_id: onprem
+    gpu_index: 6
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.101
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-01-gpu-7
+    host_id: op-01
+    cluster_id: onprem
+    gpu_index: 7
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.101
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-02-gpu-0
+    host_id: op-02
+    cluster_id: onprem
+    gpu_index: 0
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.102
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-02-gpu-1
+    host_id: op-02
+    cluster_id: onprem
+    gpu_index: 1
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.102
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-02-gpu-2
+    host_id: op-02
+    cluster_id: onprem
+    gpu_index: 2
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.102
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-02-gpu-3
+    host_id: op-02
+    cluster_id: onprem
+    gpu_index: 3
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.102
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-02-gpu-4
+    host_id: op-02
+    cluster_id: onprem
+    gpu_index: 4
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.102
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-02-gpu-5
+    host_id: op-02
+    cluster_id: onprem
+    gpu_index: 5
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.102
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-02-gpu-6
+    host_id: op-02
+    cluster_id: onprem
+    gpu_index: 6
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.102
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null
+  - node_id: op-02-gpu-7
+    host_id: op-02
+    cluster_id: onprem
+    gpu_index: 7
+    gpu_model: A100
+    gpu_mem_gb: 40
+    status: Free
+    owner: null
+    team: null
+    bmc_ip: 192.168.1.102
+    labels:
+      - A100-40GB
+    allow_expand: false
+    last_error: null

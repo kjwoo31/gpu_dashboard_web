@@ -1,0 +1,18 @@
+{"ts":"2025-11-07T15:29:47.533Z","actor":"bob","event":"ALLOCATE","nodes":["az-01"],"payload":{"team":"ML Team"}}
+{"ts":"2025-11-07T15:30:06.174Z","actor":"bob","event":"RESTART","nodes":["az-01"],"payload":{}}
+{"ts":"2025-11-07T15:30:19.720Z","actor":"alice","event":"EXPAND","nodes":["az-01","az-02"],"payload":{}}
+{"ts":"2025-11-07T15:30:30.030Z","actor":"alice","event":"RELEASE","nodes":["az-02"],"payload":{}}
+{"ts":"2025-11-07T15:49:42.979Z","actor":"alice","event":"ALLOCATE","nodes":["az-01-gpu-0"],"payload":{"team":"Test Team"}}
+{"ts":"2025-11-07T15:50:00.541Z","actor":"alice","event":"RELEASE","nodes":["az-01-gpu-0"],"payload":{}}
+{"ts":"2025-11-07T16:06:10.226Z","actor":"alice","event":"ALLOCATE","nodes":["az-01-gpu-2"],"payload":{"team":"Test Team"}}
+{"ts":"2025-11-07T16:06:26.366Z","actor":"alice","event":"ALLOCATE","nodes":["az-01-gpu-3"],"payload":{"team":"Test Team"}}
+{"ts":"2025-11-07T16:07:22.384Z","actor":"alice","event":"RELEASE","nodes":["az-01-gpu-2"],"payload":{}}
+{"ts":"2025-11-07T16:07:29.784Z","actor":"alice","event":"RELEASE","nodes":["az-01-gpu-3"],"payload":{}}
+{"ts":"2025-11-07T16:09:31.425Z","actor":"testuser","event":"ALLOCATE","nodes":["az-01-gpu-0"],"payload":{"team":"TestTeam"}}
+{"ts":"2025-11-07T16:09:40.470Z","actor":"testuser","event":"RELEASE","nodes":["az-01-gpu-0"],"payload":{}}
+{"ts":"2025-11-07T16:09:52.344Z","actor":"alice","event":"ALLOCATE","nodes":["az-01-gpu-2"],"payload":{"team":"Team A"}}
+{"ts":"2025-11-07T16:10:01.209Z","actor":"alice","event":"RELEASE","nodes":["az-01-gpu-2"],"payload":{}}
+{"ts":"2025-11-07T16:11:03.871Z","actor":"test","event":"ALLOCATE","nodes":["az-01-gpu-6"],"payload":{"team":"test"}}
+{"ts":"2025-11-07T16:11:03.889Z","actor":"test","event":"ALLOCATE","nodes":["az-01-gpu-7"],"payload":{"team":"test"}}
+{"ts":"2025-11-07T16:11:15.479Z","actor":"test","event":"RELEASE","nodes":["az-01-gpu-6"],"payload":{}}
+{"ts":"2025-11-07T16:12:17.813Z","actor":"test","event":"RELEASE","nodes":["az-01-gpu-7"],"payload":{}}

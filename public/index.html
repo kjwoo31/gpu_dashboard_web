@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GPU Portal - Dashboard</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="bg-gray-50">
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1 class="header-title">GPU Portal - Dashboard</h1>
+
+      <div class="header-controls">
+        <div class="last-updated" role="status" aria-live="polite">
+          <span class="last-updated-label">마지막 업데이트:</span>
+          <span id="last-updated-time" class="last-updated-time">-</span>
+        </div>
+
+        <select id="refresh-interval" class="refresh-interval-select" aria-label="자동 갱신 주기 선택">
+          <option value="10">10초</option>
+          <option value="30" selected>30초</option>
+          <option value="60">1분</option>
+          <option value="300">5분</option>
+        </select>
+
+        <button id="auto-refresh-toggle" class="auto-refresh-btn active" aria-pressed="true" aria-label="자동 갱신 토글">
+          자동 갱신 ON
+        </button>
+
+        <button id="refresh-btn" class="refresh-btn" aria-label="데이터 새로고침">
+          <svg class="refresh-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span class="refresh-label">갱신</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Cluster Selection -->
+    <div class="cluster-selection">
+      <div class="cluster-selection-header">
+        <div id="cluster-buttons" class="cluster-buttons"></div>
+      </div>
+    </div>
+
+    <!-- Cluster Stats -->
+    <div id="cluster-stats" class="cluster-stats"></div>
+
+    <!-- Hosts -->
+    <div id="hosts-container" class="hosts-container"></div>
+
+    <!-- GPU Detail Modal -->
+    <div id="node-modal" class="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+      <div class="modal-content">
+        <span class="close" aria-label="모달 닫기">&times;</span>
+        <h2 id="modal-title">Node Details</h2>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- Multi-GPU Allocation Panel -->
+    <div id="expand-panel" class="expand-panel" style="display: none;" role="region" aria-label="다중 GPU 할당 패널">
+      <h3>Multi-GPU Allocation</h3>
+      <div id="selected-nodes-list" role="list" aria-label="선택된 GPU 목록"></div>
+      <button id="execute-expand-btn" class="btn btn-primary" aria-label="선택된 GPU 모두 할당">Allocate Selected GPUs</button>
+      <button id="cancel-expand-btn" class="btn btn-secondary" aria-label="GPU 선택 취소">Cancel</button>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

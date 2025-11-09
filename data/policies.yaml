@@ -1,0 +1,15 @@
+ui_colors:
+  Free: "#00C853"
+  Used: "#2962FF"
+  Error: "#D50000"
+  Reserved: "#FFC400"
+
+limits:
+  max_password_attempts: 5
+
+expansion_policy:
+  require_owner_consent: true
+  reservation_timeout_minutes: 120
+
+logging:
+  audit_enabled: true
