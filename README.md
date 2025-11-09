@@ -2,6 +2,26 @@
 
 Azure 및 On-premise GPU 노드의 모니터링, 할당, 확장, 재시작, 예약을 외부 API 없이 YAML 상태 파일과 로그 파일을 통해 제어하는 웹 애플리케이션입니다.
 
+## 기술 스택
+
+### Backend
+- **Node.js** with **Express** - 웹 서버
+- **express-session** - 세션 관리
+- **js-yaml** - YAML 파일 파싱 및 생성
+- **bcrypt** - 비밀번호 해싱 (auth 모듈)
+- **proper-lockfile** - 파일 동시성 제어
+
+### Frontend
+- **Vanilla JavaScript** - 프레임워크 없는 순수 JS
+- **CSS3** - 반응형 디자인 및 애니메이션
+
+### Testing
+- **Jest** - 단위 테스트
+- **Playwright** - E2E 테스트
+
+### Development
+- **nodemon** - 개발 모드 자동 재시작
+
 ## 주요 기능
 
 - **개별 GPU 모니터링**: 개별 GPU의 상태를 실시간으로 확인 (Free/Used/Error/Reserved)
@@ -20,7 +40,7 @@ Azure 및 On-premise GPU 노드의 모니터링, 할당, 확장, 재시작, 예�
 ```
 /data            # YAML 설정 파일
   ├── clusters.yaml   # 클러스터 정의
-  ├── nodes.yaml      # 노드 정보
+  ├── nodes.yaml      # 노드 정보 (개별 GPU 단위)
   ├── users.yaml      # 사용자 정보
   └── policies.yaml   # 정책 및 UI 설정
 /logs            # 로그 파일
@@ -32,12 +52,44 @@ Azure 및 On-premise GPU 노드의 모니터링, 할당, 확장, 재시작, 예�
   └── js/app.js
 /src             # 백엔드 소스
   ├── server.js       # Express 서버
-  ├── routes/api.js   # API 라우트
-  └── utils/          # 유틸리티 함수
-      ├── yamlHandler.js  # YAML 읽기/쓰기
+  ├── constants.js    # 상수 정의
+  ├── routes/
+  │   └── api.js      # REST API 엔드포인트
+  ├── services/
+  │   └── nodeService.js  # 노드 비즈니스 로직
+  └── utils/
+      ├── dataService.js  # YAML 읽기/쓰기, 캐싱, 파일 락
       ├── logger.js       # 로깅
       └── auth.js         # 인증
+/__tests__       # 테스트 파일
+  └── dataService.test.js  # 데이터 서비스 테스트
 ```
+
+## 아키텍처
+
+### 데이터 플로우
+
+1. **클라이언트 요청** → REST API (Express)
+2. **API 라우터** → 비즈니스 로직 (nodeService)
+3. **노드 서비스** → 데이터 서비스 (캐시 + YAML 파일)
+4. **파일 락 획득** → YAML 파일 업데이트 → 락 해제
+5. **감사 로깅** → send.log & audit.log
+6. **응답 반환** → 클라이언트
+
+### 동시성 제어
+
+- **proper-lockfile** 라이브러리를 사용하여 YAML 파일 쓰기 시 파일 락 획득
+- 여러 사용자가 동시에 GPU를 할당하더라도 데이터 무결성 보장
+- 락 획득 실패 시 자동 재시도 (최대 5회)
+
+### 캐싱 전략
+
+- 서버 시작 시 모든 YAML 파일을 메모리에 로드
+- 읽기 요청은 캐시에서 즉시 응답 (빠른 성능)
+- 쓰기 요청 시:
+  1. 캐시 업데이트
+  2. 파일 저장
+  3. 저장 실패 시 캐시 롤백
 
 ## 설치 및 실행
 
@@ -64,6 +116,30 @@ npm run dev
 ```
 http://localhost:3000
 ```
+
+### 4. 테스트 실행
+
+#### 단위 테스트 (Jest)
+```bash
+npm test
+```
+
+#### E2E 테스트 (Playwright)
+```bash
+npm run test:e2e
+```
+
+## 환경 변수
+
+현재 환경 변수는 사용하지 않지만, 필요 시 `.env` 파일을 생성하여 설정할 수 있습니다:
+
+```env
+PORT=3000
+SESSION_SECRET=your-secret-key-here
+AUTO_REFRESH_INTERVAL=30
+```
+
+서버는 기본값으로 동작하며, `PORT` 환경 변수가 설정되어 있으면 해당 포트를 사용합니다.
 
 ## 사용 방법
 
@@ -227,20 +303,130 @@ UI 색상, 제한, 확장 정책, 로깅 설정을 관리합니다.
 
 ## API 엔드포인트
 
-- `GET /api/data` - 전체 데이터 조회
-- `POST /api/nodes/:nodeId/allocate` - 노드 할당
-- `POST /api/nodes/:nodeId/release` - 노드 해제
-- `POST /api/nodes/:nodeId/restart` - 노드 재시작
-- `POST /api/nodes/:nodeId/toggle-expand` - 확장 허가 토글
-- `POST /api/nodes/expand` - 다중 노드 확장
-- `POST /api/nodes/:nodeId/call-admin` - 관리자 호출
+### GET /api/data
+전체 데이터 조회 (clusters, nodes, users, policies)
+
+**Response:**
+```json
+{
+  "clusters": [...],
+  "nodes": {...},
+  "users": {...},
+  "policies": {...}
+}
+```
+
+### POST /api/nodes/:nodeId/allocate
+GPU 노드 할당 (Free → Used)
+
+**Request Body:**
+```json
+{
+  "userId": "alice",
+  "password": "mypassword",
+  "team": "AI Team"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Node allocated successfully"
+}
+```
+
+### POST /api/nodes/:nodeId/release
+GPU 노드 해제 (Used → Free)
+
+**Request Body:**
+```json
+{
+  "userId": "alice",
+  "password": "mypassword"
+}
+```
+
+### POST /api/nodes/:nodeId/restart
+GPU 노드 재시작 (명령 로그에만 기록)
+
+**Request Body:**
+```json
+{
+  "userId": "alice",
+  "password": "mypassword"
+}
+```
+
+### POST /api/nodes/:nodeId/toggle-expand
+확장 허가 토글
+
+**Request Body:**
+```json
+{
+  "userId": "alice",
+  "password": "mypassword",
+  "allowExpand": true
+}
+```
+
+### POST /api/nodes/expand
+다중 GPU 할당
+
+**Request Body:**
+```json
+{
+  "userId": "alice",
+  "password": "mypassword",
+  "nodeIds": ["az-01-gpu-0", "az-01-gpu-1"],
+  "team": "AI Team"
+}
+```
+
+### POST /api/nodes/:nodeId/call-admin
+관리자 호출 (Error 상태 노드)
+
+**Request Body:**
+```json
+{
+  "userId": "alice",
+  "message": "GPU not responding"
+}
+```
 
 ## 보안
 
-- 모든 작업은 사용자 인증 필요
-- 비밀번호는 bcrypt로 해시화
-- 노드 소유자 또는 관리자만 작업 수행 가능
-- 모든 작업이 감사 로그에 기록
+### 현재 구현
+- **Per-GPU 인증**: 각 GPU마다 독립적인 User ID/Password 설정
+- **비밀번호 저장**: 현재 **평문**으로 저장됨 (nodes.yaml의 password_hash 필드)
+- **노드 소유자 검증**: 할당한 사용자만 해당 GPU를 해제/재시작 가능
+- **감사 로깅**: 모든 작업이 send.log 및 audit.log에 기록
+
+### 보안 개선 권장사항
+
+**중요**: 현재 비밀번호는 평문으로 저장되므로 실제 운영 환경에서는 보안 강화가 필요합니다.
+
+#### 프로덕션 환경 권장 사항:
+1. **비밀번호 해싱**
+   - `src/services/nodeService.js`에서 bcrypt를 사용하여 비밀번호 해싱
+   - 할당 시: `password_hash: await bcrypt.hash(password, 10)`
+   - 검증 시: `await bcrypt.compare(password, node.password_hash)`
+
+2. **HTTPS 적용**
+   - 프로덕션 환경에서는 반드시 HTTPS 사용
+   - Nginx 또는 Apache를 리버스 프록시로 사용
+
+3. **세션 보안**
+   - SESSION_SECRET을 환경 변수로 관리
+   - secure: true, httpOnly: true 옵션 추가
+
+4. **접근 제어**
+   - users.yaml의 role 기반 권한 관리 활성화
+   - 관리자 전용 기능 분리
+
+5. **파일 권한**
+   - YAML 파일 및 로그 파일의 읽기/쓰기 권한 제한
+   - `chmod 600 data/*.yaml logs/*.log`
 
 ## 확장성
 
@@ -305,6 +491,117 @@ cp logs/audit.log logs/audit.log.$(date +%Y%m%d)
 ### 노드 상태 수동 변경
 
 필요시 `nodes.yaml` 파일을 직접 수정하여 노드 상태를 변경할 수 있습니다. 변경 후 브라우저에서 새로고침하면 즉시 반영됩니다.
+
+## 개발자 가이드
+
+### 코드 구조
+
+#### Backend (src/)
+- **server.js**: Express 앱 초기화, 미들웨어 설정, 서버 시작
+- **constants.js**: 상수 정의 (NODE_STATUS)
+- **routes/api.js**: REST API 엔드포인트 정의 및 요청 검증
+- **services/nodeService.js**: 비즈니스 로직 (allocate, release, restart 등)
+- **utils/dataService.js**: YAML 파일 읽기/쓰기, 캐싱, 파일 락
+- **utils/logger.js**: send.log, audit.log 로깅
+- **utils/auth.js**: 사용자 인증 (현재는 미사용, 참조용)
+
+#### Frontend (public/)
+- **index.html**: 메인 HTML 구조
+- **js/app.js**:
+  - 데이터 로딩 및 렌더링
+  - 이벤트 핸들링
+  - 모달 관리
+  - 자동 갱신
+  - 호스트별 GPU 선택 모드
+- **css/styles.css**: 반응형 스타일, 툴팁, 애니메이션
+
+### 새 기능 추가 가이드
+
+#### 1. 새 API 엔드포인트 추가
+
+1. `src/routes/api.js`에 라우트 추가
+2. `src/services/nodeService.js`에 비즈니스 로직 추가
+3. 필요시 `src/utils/dataService.js`에 데이터 접근 함수 추가
+4. `src/utils/logger.js`로 로깅 추가
+
+#### 2. 새 노드 상태 추가 (예: "Maintenance")
+
+1. `src/constants.js`에 상수 추가:
+   ```javascript
+   const NODE_STATUS = {
+     FREE: 'Free',
+     USED: 'Used',
+     ERROR: 'Error',
+     MAINTENANCE: 'Maintenance'  // 추가
+   };
+   ```
+
+2. `data/policies.yaml`에 색상 추가:
+   ```yaml
+   ui_colors:
+     Maintenance: "#FF9800"
+   ```
+
+3. `public/css/styles.css`에 스타일 추가:
+   ```css
+   .node.maintenance {
+     background: var(--color-maintenance);
+   }
+   ```
+
+4. `public/js/app.js`에서 렌더링 로직 업데이트
+
+#### 3. 테스트 작성
+
+**단위 테스트 예시 (`__tests__/nodeService.test.js`):**
+```javascript
+const { allocateNode } = require('../src/services/nodeService');
+
+describe('nodeService', () => {
+  test('should allocate a free node', async () => {
+    const result = await allocateNode('az-01-gpu-0', 'alice', 'pass', 'AI Team');
+    expect(result).toBe(true);
+  });
+});
+```
+
+**E2E 테스트 예시 (`tests/e2e/allocation.spec.js`):**
+```javascript
+const { test, expect } = require('@playwright/test');
+
+test('allocate and release GPU', async ({ page }) => {
+  await page.goto('http://localhost:3000');
+  // ... 테스트 로직
+});
+```
+
+### 디버깅 팁
+
+1. **로그 확인**
+   ```bash
+   tail -f logs/send.log
+   tail -f logs/audit.log
+   ```
+
+2. **캐시 상태 확인**
+   - `src/utils/dataService.js`의 `_getCache()` 함수 사용
+   - 브라우저 콘솔에서 `console.log(allData)` 확인
+
+3. **파일 락 문제**
+   - `data/` 디렉토리에 `.lock` 파일이 남아있는지 확인
+   - 서버 비정상 종료 시 락 파일 수동 삭제 필요
+
+4. **개발 모드에서 자동 재시작**
+   ```bash
+   npm run dev  # nodemon 사용
+   ```
+
+### 성능 최적화
+
+1. **캐싱**: 모든 YAML 데이터는 메모리에 캐싱되어 읽기 성능 향상
+2. **파일 락**: 쓰기 작업만 락을 사용하여 읽기 성능 유지
+3. **자동 갱신**: 기본 30초 간격, 필요시 조정 가능
+4. **프론트엔드**: Vanilla JS 사용으로 번들 크기 최소화
 
 ## UI/UX 개선 사항
 

@@ -10,7 +10,6 @@ let cache = {};
 
 // Function to load all YAML files into the cache
 async function loadData() {
-    console.log('Loading all YAML data into cache...');
     const data = {};
     for (const filename of YAML_FILES) {
         try {
@@ -24,7 +23,6 @@ async function loadData() {
         }
     }
     cache = data;
-    console.log('Data loaded into cache.');
 }
 
 // Function to get all data from the cache

@@ -101,6 +101,9 @@ describe('dataService', () => {
         await loadData();
         const nodeId = 'az-01-gpu-0';
 
+        // Suppress console.error for this test because an error is expected
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
         // Mock fs.promises.writeFile to throw an error
         fs.promises.writeFile.mockRejectedValueOnce(new Error('Save failed'));
 
@@ -110,5 +113,8 @@ describe('dataService', () => {
         const cache = _getCache();
         const revertedNode = cache.nodes.nodes.find(n => n.node_id === nodeId);
         expect(revertedNode.status).not.toBe('Error');
+
+        // Restore console.error
+        consoleErrorSpy.mockRestore();
     });
 });

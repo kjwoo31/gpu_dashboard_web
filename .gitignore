@@ -1,3 +1,35 @@
-node_modules
+# Dependencies
+node_modules/
+
+# Testing
 playwright-report/
 test-results/
+coverage/
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# File locks
+*.lock
+!package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
