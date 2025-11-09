@@ -8,28 +8,28 @@ const { loadData } = require('./utils/dataService');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 미들웨어
+// Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// 세션 설정
+// Session configuration
 app.use(session({
   secret: 'gpu-control-hub-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24시간
+  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
 }));
 
-// API 라우트
+// API routes
 app.use('/api', apiRouter);
 
-// 메인 페이지
+// Main page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// 서버 시작
+// Start server
 async function startServer() {
   await loadData();
   app.listen(PORT, () => {

@@ -1,218 +1,159 @@
 const express = require('express');
 const router = express.Router();
-const { getAllData, updateNode, updateNodes } = require('../utils/dataService');
-const { authenticateUser, verifyNodeOwner, isAdmin } = require('../utils/auth');
-const { logToSend, logToAudit } = require('../utils/logger');
+const { getAllData } = require('../utils/dataService');
+const {
+  allocateNode,
+  restartNode,
+  releaseNode,
+  toggleExpandPermission,
+  expandNodes,
+  callAdmin
+} = require('../services/nodeService');
 
-// 전체 데이터 조회
+// Get all data
 router.get('/data', (req, res) => {
   const data = getAllData();
   res.json(data);
 });
 
-// 노드 할당 (Free -> Used)
+// Allocate node (Free -> Used)
 router.post('/nodes/:nodeId/allocate', async (req, res) => {
   const { nodeId } = req.params;
   const { userId, password, team } = req.body;
 
-  // 입력 검증
   if (!userId || !password) {
     return res.status(400).json({ error: 'User ID and password are required' });
   }
 
-  // 노드 상태 확인
-  const data = getAllData();
-  const node = data.nodes.nodes.find(n => n.node_id === nodeId);
-
-  if (!node) {
-    return res.status(404).json({ error: 'Node not found' });
-  }
-
-  if (node.status !== 'Free') {
-    return res.status(400).json({ error: 'Node is not available' });
-  }
-
-  // 노드 할당 - userId와 password를 저장
-  const success = await updateNode(nodeId, {
-    status: 'Used',
-    owner: userId,
-    team: team || null,
-    password_hash: password  // 비밀번호를 평문으로 저장 (실제로는 해시화 권장)
-  });
-
-  if (success) {
-    logToSend(userId, 'ALLOCATE', [nodeId], { team });
-    logToAudit(userId, 'allocate_node', { node_id: nodeId, team });
-    res.json({ success: true, message: 'Node allocated successfully' });
-  } else {
-    res.status(500).json({ error: 'Failed to allocate node' });
+  try {
+    const success = await allocateNode(nodeId, userId, password, team);
+    if (success) {
+      res.json({ success: true, message: 'Node allocated successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to allocate node' });
+    }
+  } catch (error) {
+    if (error.message === 'Node not found') {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message === 'Node is not available') {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'An unexpected error occurred' });
   }
 });
 
-// 노드 재시작
+// Restart node
 router.post('/nodes/:nodeId/restart', async (req, res) => {
   const { nodeId } = req.params;
   const { userId, password } = req.body;
 
-  // 입력 검증
   if (!userId || !password) {
     return res.status(400).json({ error: 'User ID and password are required' });
   }
 
-  // 노드 확인
-  const data = getAllData();
-  const node = data.nodes.nodes.find(n => n.node_id === nodeId);
-
-  if (!node) {
-    return res.status(404).json({ error: 'Node not found' });
+  try {
+    await restartNode(nodeId, userId, password);
+    res.json({ success: true, message: 'Restart command logged' });
+  } catch (error) {
+    if (error.message === 'Node not found') {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.startsWith('Not authorized')) {
+      return res.status(403).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'An unexpected error occurred' });
   }
-
-  // 소유자와 비밀번호 확인
-  if (node.owner !== userId) {
-    return res.status(403).json({ error: 'Not authorized - incorrect user ID' });
-  }
-
-  if (node.password_hash !== password) {
-    return res.status(403).json({ error: 'Not authorized - incorrect password' });
-  }
-
-  // 재시작 명령 로그
-  logToSend(userId, 'RESTART', [nodeId], {});
-  logToAudit(userId, 'restart_node', { node_id: nodeId });
-
-  res.json({ success: true, message: 'Restart command logged' });
 });
 
-// 노드 해제 (Used -> Free)
+// Release node (Used -> Free)
 router.post('/nodes/:nodeId/release', async (req, res) => {
   const { nodeId } = req.params;
   const { userId, password } = req.body;
 
-  // 입력 검증
   if (!userId || !password) {
     return res.status(400).json({ error: 'User ID and password are required' });
   }
 
-  // 노드 확인
-  const data = getAllData();
-  const node = data.nodes.nodes.find(n => n.node_id === nodeId);
-
-  if (!node) {
-    return res.status(404).json({ error: 'Node not found' });
-  }
-
-  // 소유자와 비밀번호 확인
-  if (node.owner !== userId) {
-    return res.status(403).json({ error: 'Not authorized - incorrect user ID' });
-  }
-
-  if (node.password_hash !== password) {
-    return res.status(403).json({ error: 'Not authorized - incorrect password' });
-  }
-
-  // 노드 해제
-  const success = await updateNode(nodeId, {
-    status: 'Free',
-    owner: null,
-    team: null,
-    password_hash: null
-  });
-
-  if (success) {
-    logToSend(userId, 'RELEASE', [nodeId], {});
-    logToAudit(userId, 'release_node', { node_id: nodeId });
-    res.json({ success: true, message: 'Node released successfully' });
-  } else {
-    res.status(500).json({ error: 'Failed to release node' });
+  try {
+    const success = await releaseNode(nodeId, userId, password);
+    if (success) {
+      res.json({ success: true, message: 'Node released successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to release node' });
+    }
+  } catch (error) {
+    if (error.message === 'Node not found') {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.startsWith('Not authorized')) {
+      return res.status(403).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'An unexpected error occurred' });
   }
 });
 
-// 확장 허가 토글
+// Toggle expand permission
 router.post('/nodes/:nodeId/toggle-expand', async (req, res) => {
   const { nodeId } = req.params;
   const { userId, password, allowExpand } = req.body;
 
-  // 입력 검증
   if (!userId || !password) {
     return res.status(400).json({ error: 'User ID and password are required' });
   }
 
-  // 노드 확인
-  const data = getAllData();
-  const node = data.nodes.nodes.find(n => n.node_id === nodeId);
-
-  if (!node) {
-    return res.status(404).json({ error: 'Node not found' });
-  }
-
-  // 소유자와 비밀번호 확인
-  if (node.owner !== userId) {
-    return res.status(403).json({ error: 'Not authorized - incorrect user ID' });
-  }
-
-  if (node.password_hash !== password) {
-    return res.status(403).json({ error: 'Not authorized - incorrect password' });
-  }
-
-  // 확장 허가 토글
-  const success = await updateNode(nodeId, {
-    allow_expand: allowExpand
-  });
-
-  if (success) {
-    logToAudit(userId, 'toggle_expand', { node_id: nodeId, allow_expand: allowExpand });
-    res.json({ success: true, message: 'Expand permission updated' });
-  } else {
-    res.status(500).json({ error: 'Failed to update expand permission' });
+  try {
+    const success = await toggleExpandPermission(nodeId, userId, password, allowExpand);
+    if (success) {
+      res.json({ success: true, message: 'Expand permission updated' });
+    } else {
+      res.status(500).json({ error: 'Failed to update expand permission' });
+    }
+  } catch (error) {
+    if (error.message === 'Node not found') {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.startsWith('Not authorized')) {
+      return res.status(403).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'An unexpected error occurred' });
   }
 });
 
-// 노드 확장 (다중 노드 할당)
+// Expand nodes (allocate multiple nodes)
 router.post('/nodes/expand', async (req, res) => {
   const { userId, password, nodeIds, team } = req.body;
 
-  // 입력 검증
   if (!userId || !password) {
     return res.status(400).json({ error: 'User ID and password are required' });
   }
 
-  // 노드 상태 확인
-  const data = getAllData();
-  const nodes = data.nodes.nodes.filter(n => nodeIds.includes(n.node_id));
-
-  // 모든 노드가 Free인지 확인
-  const allFree = nodes.every(n => n.status === 'Free');
-
-  if (!allFree) {
-    return res.status(400).json({ error: 'All nodes must be Free to expand' });
-  }
-
-  // 확장 실행 - 모든 노드에 같은 userId, password, team 설정
-  const success = await updateNodes(nodeIds, {
-    status: 'Used',
-    owner: userId,
-    team: team || null,
-    password_hash: password
-  });
-
-  if (success) {
-    logToSend(userId, 'EXPAND', nodeIds, { team });
-    logToAudit(userId, 'expand_nodes', { node_ids: nodeIds, team });
-    res.json({ success: true, message: 'Nodes expanded successfully' });
-  } else {
-    res.status(500).json({ error: 'Failed to expand nodes' });
+  try {
+    const success = await expandNodes(userId, password, nodeIds, team);
+    if (success) {
+      res.json({ success: true, message: 'Nodes expanded successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to expand nodes' });
+    }
+  } catch (error) {
+    if (error.message === 'All nodes must be Free to expand') {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'An unexpected error occurred' });
   }
 });
 
-// 관리자 호출 (Error 노드)
-router.post('/nodes/:nodeId/call-admin', async (req, res) => {
+// Call admin (for nodes in Error state)
+router.post('/nodes/:nodeId/call-admin', (req, res) => {
   const { nodeId } = req.params;
   const { userId, message } = req.body;
 
-  logToSend(userId, 'CALL_ADMIN', [nodeId], { message });
-  logToAudit(userId, 'call_admin', { node_id: nodeId, message });
-
-  res.json({ success: true, message: 'Admin has been notified' });
+  try {
+    callAdmin(nodeId, userId, message);
+    res.json({ success: true, message: 'Admin has been notified' });
+  } catch (error) {
+    res.status(500).json({ error: 'An unexpected error occurred' });
+  }
 });
 
 module.exports = router;
