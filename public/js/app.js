@@ -15,46 +15,45 @@ document.addEventListener('DOMContentLoaded', () => {
   startAutoRefresh();
 });
 
+// 자동 갱신 토글 핸들러
+function handleAutoRefreshToggle() {
+  autoRefreshEnabled = !autoRefreshEnabled;
+  const btn = document.getElementById('auto-refresh-toggle');
+  btn.textContent = autoRefreshEnabled ? '자동 갱신 ON' : '자동 갱신 OFF';
+  btn.classList.toggle('active', autoRefreshEnabled);
+  btn.setAttribute('aria-pressed', autoRefreshEnabled);
+
+  if (autoRefreshEnabled) {
+    startAutoRefresh();
+  } else {
+    stopAutoRefresh();
+  }
+}
+
+// 갱신 주기 변경 핸들러
+function handleRefreshIntervalChange(e) {
+  refreshIntervalSeconds = parseInt(e.target.value);
+  if (autoRefreshEnabled) {
+    stopAutoRefresh();
+    startAutoRefresh();
+  }
+}
+
+// 모달 외부 클릭 핸들러
+function handleWindowClick(e) {
+  const modal = document.getElementById('node-modal');
+  if (e.target === modal) {
+    closeModal();
+  }
+}
+
 // 이벤트 리스너 설정
 function setupEventListeners() {
-  // 새로고침 버튼
   document.getElementById('refresh-btn').addEventListener('click', loadData);
-
-  // 자동 갱신 토글
-  document.getElementById('auto-refresh-toggle').addEventListener('click', () => {
-    autoRefreshEnabled = !autoRefreshEnabled;
-    const btn = document.getElementById('auto-refresh-toggle');
-    btn.textContent = autoRefreshEnabled ? '자동 갱신 ON' : '자동 갱신 OFF';
-    btn.classList.toggle('active', autoRefreshEnabled);
-    btn.setAttribute('aria-pressed', autoRefreshEnabled);
-
-    if (autoRefreshEnabled) {
-      startAutoRefresh();
-    } else {
-      stopAutoRefresh();
-    }
-  });
-
-  // 갱신 주기 선택
-  document.getElementById('refresh-interval').addEventListener('change', (e) => {
-    refreshIntervalSeconds = parseInt(e.target.value);
-    if (autoRefreshEnabled) {
-      stopAutoRefresh();
-      startAutoRefresh();
-    }
-  });
-
-  // 모달 닫기
+  document.getElementById('auto-refresh-toggle').addEventListener('click', handleAutoRefreshToggle);
+  document.getElementById('refresh-interval').addEventListener('change', handleRefreshIntervalChange);
   document.querySelector('.close').addEventListener('click', closeModal);
-
-  window.addEventListener('click', (e) => {
-    const modal = document.getElementById('node-modal');
-    if (e.target === modal) {
-      closeModal();
-    }
-  });
-
-  // 확장 패널 버튼
+  window.addEventListener('click', handleWindowClick);
   document.getElementById('execute-expand-btn').addEventListener('click', executeExpansion);
   document.getElementById('cancel-expand-btn').addEventListener('click', cancelExpansion);
 }
@@ -114,6 +113,28 @@ function updateLastUpdatedDisplay() {
   document.getElementById('last-updated-time').textContent = formatLastUpdated();
 }
 
+// 첫 로딩 시 클러스터 자동 선택
+function autoSelectFirstCluster() {
+  if (!selectedClusterId && allData.clusters.clusters.length > 0) {
+    selectedClusterId = allData.clusters.clusters[0].id;
+  }
+}
+
+// UI 렌더링
+function renderUI() {
+  renderClusterButtons();
+  renderClusterStats();
+  renderHosts();
+}
+
+// 에러 컨테이너 숨기기
+function hideErrorContainer() {
+  const errorContainer = document.getElementById('error-container');
+  if (errorContainer) {
+    errorContainer.style.display = 'none';
+  }
+}
+
 // 데이터 로드
 async function loadData(silent = false) {
   try {
@@ -124,21 +145,9 @@ async function loadData(silent = false) {
     allData = await response.json();
     lastUpdated = new Date();
     updateLastUpdatedDisplay();
-
-    // 첫 로딩 시 첫 번째 클러스터 자동 선택
-    if (!selectedClusterId && allData.clusters.clusters.length > 0) {
-      selectedClusterId = allData.clusters.clusters[0].id;
-    }
-
-    renderClusterButtons();
-    renderClusterStats();
-    renderHosts();
-
-    // 에러 메시지 제거
-    const errorContainer = document.getElementById('error-container');
-    if (errorContainer) {
-      errorContainer.style.display = 'none';
-    }
+    autoSelectFirstCluster();
+    renderUI();
+    hideErrorContainer();
   } catch (error) {
     console.error('Error loading data:', error);
     if (!silent) {
@@ -147,18 +156,21 @@ async function loadData(silent = false) {
   }
 }
 
-// 에러 메시지 표시
-function showErrorMessage(message) {
+// 에러 컨테이너 가져오기 또는 생성
+function getOrCreateErrorContainer() {
   let errorContainer = document.getElementById('error-container');
-
   if (!errorContainer) {
-    // 에러 컨테이너 생성
     errorContainer = document.createElement('div');
     errorContainer.id = 'error-container';
     errorContainer.className = 'error-overlay';
     document.body.appendChild(errorContainer);
   }
+  return errorContainer;
+}
 
+// 에러 메시지 표시
+function showErrorMessage(message) {
+  const errorContainer = getOrCreateErrorContainer();
   errorContainer.innerHTML = `
     <div class="error-dialog">
       <div class="error-icon">
@@ -173,7 +185,6 @@ function showErrorMessage(message) {
       <button class="error-retry-btn" onclick="retryLoadData()">다시 시도</button>
     </div>
   `;
-
   errorContainer.style.display = 'flex';
 }
 
@@ -186,36 +197,41 @@ function retryLoadData() {
   loadData();
 }
 
+// 클러스터 선택 핸들러
+function handleClusterSelect(clusterId) {
+  if (selectedClusterId !== clusterId) {
+    selectedHostId = null;
+    selectedNodes.clear();
+    updateExpandPanel();
+  }
+  selectedClusterId = clusterId;
+  renderClusterButtons();
+  renderClusterStats();
+  renderHosts();
+}
+
+// 클러스터 버튼 생성
+function createClusterButton(cluster) {
+  const stats = getClusterStats(cluster.id);
+  const button = document.createElement('button');
+  const isActive = selectedClusterId === cluster.id;
+  button.className = `cluster-btn ${isActive ? 'active' : ''}`;
+  button.setAttribute('aria-pressed', isActive);
+  button.setAttribute('aria-label', `${cluster.name} 클러스터 선택. ${stats.free}개 사용 가능, 총 ${stats.total}개`);
+  button.innerHTML = `
+    <span>${cluster.name}</span>
+    <span class="cluster-info">(${stats.free}/${stats.total} free)</span>
+  `;
+  button.addEventListener('click', () => handleClusterSelect(cluster.id));
+  return button;
+}
+
 // 클러스터 버튼 렌더링
 function renderClusterButtons() {
   const container = document.getElementById('cluster-buttons');
   container.innerHTML = '';
-
   allData.clusters.clusters.forEach(cluster => {
-    const stats = getClusterStats(cluster.id);
-    const button = document.createElement('button');
-    const isActive = selectedClusterId === cluster.id;
-    button.className = `cluster-btn ${isActive ? 'active' : ''}`;
-    button.setAttribute('aria-pressed', isActive);
-    button.setAttribute('aria-label', `${cluster.name} 클러스터 선택. ${stats.free}개 사용 가능, 총 ${stats.total}개`);
-    button.innerHTML = `
-      <span>${cluster.name}</span>
-      <span class="cluster-info">(${stats.free}/${stats.total} free)</span>
-    `;
-    button.addEventListener('click', () => {
-      // 클러스터 변경 시 선택 모드 해제
-      if (selectedClusterId !== cluster.id) {
-        selectedHostId = null;
-        selectedNodes.clear();
-        updateExpandPanel();
-      }
-
-      selectedClusterId = cluster.id;
-      renderClusterButtons();
-      renderClusterStats();
-      renderHosts();
-    });
-    container.appendChild(button);
+    container.appendChild(createClusterButton(cluster));
   });
 }
 
@@ -232,52 +248,95 @@ function getClusterStats(clusterId) {
   };
 }
 
-// 클러스터 통계 렌더링
-function renderClusterStats() {
-  if (!selectedClusterId) return;
-
-  const container = document.getElementById('cluster-stats');
-  const stats = getClusterStats(selectedClusterId);
-  const total = stats.total;
-
-  const freePercent = total ? (stats.free / total) * 100 : 0;
-  const usedPercent = total ? (stats.used / total) * 100 : 0;
-  const errorPercent = total ? (stats.error / total) * 100 : 0;
-
-  const cluster = allData.clusters.clusters.find(c => c.id === selectedClusterId);
-  const clusterName = cluster ? cluster.name : selectedClusterId;
-
-  container.innerHTML = `
-    <h2 class="stats-title">${clusterName} - GPU Overview</h2>
-
+// 통계 박스 HTML 생성
+function buildStatsBoxes(stats) {
+  return `
     <div class="stats-grid">
       <div class="stat-box total">
-        <div class="stat-value total" aria-label="총 GPU ${total}개">${total}</div>
+        <div class="stat-value total" aria-label="총 GPU ${stats.total}개">${stats.total}</div>
         <div class="stat-label">Total GPUs</div>
       </div>
-
       <div class="stat-box free">
         <div class="stat-value free" aria-label="사용 가능 GPU ${stats.free}개">${stats.free}</div>
         <div class="stat-label">Free</div>
       </div>
-
       <div class="stat-box used">
         <div class="stat-value used" aria-label="사용 중 GPU ${stats.used}개">${stats.used}</div>
         <div class="stat-label">In Use</div>
       </div>
-
       <div class="stat-box error">
         <div class="stat-value error" aria-label="오류 GPU ${stats.error}개">${stats.error}</div>
         <div class="stat-label">Error</div>
       </div>
     </div>
+  `;
+}
 
+// 프로그레스 바 HTML 생성
+function buildProgressBar(stats) {
+  const total = stats.total;
+  const freePercent = total ? (stats.free / total) * 100 : 0;
+  const usedPercent = total ? (stats.used / total) * 100 : 0;
+  const errorPercent = total ? (stats.error / total) * 100 : 0;
+
+  return `
     <div class="stats-progress-bar" role="progressbar" aria-label="GPU 상태 분포" aria-valuenow="${stats.free}" aria-valuemin="0" aria-valuemax="${total}">
       <div class="progress-segment free" style="width: ${freePercent}%" title="Free: ${freePercent.toFixed(1)}%" aria-label="사용 가능 ${freePercent.toFixed(1)}%"></div>
       <div class="progress-segment used" style="width: ${usedPercent}%" title="Used: ${usedPercent.toFixed(1)}%" aria-label="사용 중 ${usedPercent.toFixed(1)}%"></div>
       <div class="progress-segment error" style="width: ${errorPercent}%" title="Error: ${errorPercent.toFixed(1)}%" aria-label="오류 ${errorPercent.toFixed(1)}%"></div>
     </div>
   `;
+}
+
+// 클러스터 통계 렌더링
+function renderClusterStats() {
+  if (!selectedClusterId) return;
+
+  const container = document.getElementById('cluster-stats');
+  const stats = getClusterStats(selectedClusterId);
+  const cluster = allData.clusters.clusters.find(c => c.id === selectedClusterId);
+  const clusterName = cluster ? cluster.name : selectedClusterId;
+
+  container.innerHTML = `
+    <h2 class="stats-title">${clusterName} - GPU Overview</h2>
+    ${buildStatsBoxes(stats)}
+    ${buildProgressBar(stats)}
+  `;
+}
+
+// 노드를 host_id로 그룹화
+function groupNodesByHostId(nodes) {
+  const hostGroups = {};
+  nodes.forEach(node => {
+    if (!hostGroups[node.host_id]) {
+      hostGroups[node.host_id] = [];
+    }
+    hostGroups[node.host_id].push(node);
+  });
+  return hostGroups;
+}
+
+// GPU 카드 클릭 핸들러
+function handleGPUCardClick(node) {
+  if (selectedHostId) {
+    if (node.status === 'Free' && node.host_id === selectedHostId) {
+      toggleNodeSelection(node.node_id);
+    }
+  } else {
+    if (node.status !== 'Free') {
+      showNodeModal(node);
+    }
+  }
+}
+
+// GPU 카드 이벤트 리스너 연결
+function attachGPUCardEventListeners(nodes) {
+  nodes.forEach(node => {
+    const gpuCard = document.getElementById(`gpu-${node.node_id}`);
+    if (gpuCard) {
+      gpuCard.addEventListener('click', () => handleGPUCardClick(node));
+    }
+  });
 }
 
 // 호스트 렌더링
@@ -293,17 +352,7 @@ function renderHosts() {
   }
 
   const cluster = allData.clusters.clusters.find(c => c.id === selectedClusterId);
-
-  // host_id로 그룹화
-  const hostGroups = {};
-  nodes.forEach(node => {
-    if (!hostGroups[node.host_id]) {
-      hostGroups[node.host_id] = [];
-    }
-    hostGroups[node.host_id].push(node);
-  });
-
-  // host_id별로 정렬
+  const hostGroups = groupNodesByHostId(nodes);
   const sortedHostIds = Object.keys(hostGroups).sort();
 
   container.innerHTML = `
@@ -311,61 +360,29 @@ function renderHosts() {
     ${sortedHostIds.map(hostId => createHostCard(hostId, hostGroups[hostId])).join('')}
   `;
 
-  // 이벤트 리스너 추가
-  nodes.forEach(node => {
-    const gpuCard = document.getElementById(`gpu-${node.node_id}`);
-    if (gpuCard) {
-      gpuCard.addEventListener('click', (e) => {
-        if (selectedHostId) {
-          // 선택 모드: 현재 선택된 호스트의 Free GPU만 선택 가능
-          if (node.status === 'Free' && node.host_id === selectedHostId) {
-            toggleNodeSelection(node.node_id);
-          }
-        } else {
-          // 일반 모드: Free GPU는 아무 동작 안 함, Used/Error만 모달 표시
-          if (node.status !== 'Free') {
-            showNodeModal(node);
-          }
-        }
-      });
-    }
-  });
+  attachGPUCardEventListeners(nodes);
 }
 
-// 호스트 카드 생성
-function createHostCard(hostId, gpus) {
-  const freeGPUs = gpus.filter(g => g.status === 'Free').length;
-  const totalGPUs = gpus.length;
-  const hasError = gpus.some(g => g.status === 'Error');
-
-  // gpu_index로 정렬
-  const sortedGPUs = gpus.sort((a, b) => a.gpu_index - b.gpu_index);
-
-  // 같은 owner/team을 가진 GPU 그룹 찾기
+// GPU를 owner/team으로 그룹화
+function groupGPUsByOwnerTeam(sortedGPUs) {
   const groups = [];
   let currentGroup = null;
 
-  sortedGPUs.forEach((gpu, idx) => {
+  sortedGPUs.forEach(gpu => {
     const groupKey = gpu.status === 'Used' && gpu.owner && gpu.team
       ? `${gpu.owner}-${gpu.team}`
       : null;
 
     if (groupKey && currentGroup && currentGroup.key === groupKey) {
-      // 현재 그룹에 추가
       currentGroup.gpus.push({ ...gpu, groupPosition: 'middle' });
     } else {
-      // 이전 그룹 종료
       if (currentGroup && currentGroup.gpus.length > 0) {
         currentGroup.gpus[currentGroup.gpus.length - 1].groupPosition = 'last';
         groups.push(currentGroup);
       }
 
-      // 새 그룹 시작
       if (groupKey) {
-        currentGroup = {
-          key: groupKey,
-          gpus: [{ ...gpu, groupPosition: 'first' }]
-        };
+        currentGroup = { key: groupKey, gpus: [{ ...gpu, groupPosition: 'first' }] };
       } else {
         groups.push({ key: null, gpus: [{ ...gpu, groupPosition: null }] });
         currentGroup = null;
@@ -373,45 +390,56 @@ function createHostCard(hostId, gpus) {
     }
   });
 
-  // 마지막 그룹 처리
   if (currentGroup && currentGroup.gpus.length > 0) {
     currentGroup.gpus[currentGroup.gpus.length - 1].groupPosition = 'last';
     groups.push(currentGroup);
   }
 
-  // 그룹 정보를 포함한 GPU 배열 생성
-  const gpusWithGroupInfo = [];
-  groups.forEach(group => {
-    group.gpus.forEach(gpu => {
-      gpusWithGroupInfo.push(gpu);
-    });
-  });
+  return groups.flatMap(group => group.gpus);
+}
 
+// 호스트 헤더 HTML 생성
+function buildHostHeaderHTML(hostId, stats, isSelectionMode) {
+  return `
+    <div class="host-header">
+      <div class="host-info">
+        <h3 class="host-name">${hostId}</h3>
+        <p class="host-hostname">${stats.clusterId} cluster</p>
+        <p class="host-gpu-count">GPU: ${stats.free}/${stats.total} available</p>
+      </div>
+      <div class="host-header-actions">
+        <button class="use-gpu-btn ${isSelectionMode ? 'active' : ''}"
+                onclick="toggleSelectionMode('${hostId}')"
+                aria-pressed="${isSelectionMode}"
+                aria-label="${isSelectionMode ? hostId + ' GPU 선택 취소' : hostId + ' GPU 사용 시작'}">
+          ${isSelectionMode ? 'Cancel Selection' : 'Use GPU'}
+        </button>
+        <span class="host-status ${stats.hasError ? 'offline' : 'online'}"
+              role="status"
+              aria-label="${stats.hasError ? '오류 상태' : '온라인 상태'}">
+          ${stats.hasError ? 'Error' : 'Online'}
+        </span>
+      </div>
+    </div>
+  `;
+}
+
+// 호스트 카드 생성
+function createHostCard(hostId, gpus) {
+  const stats = {
+    free: gpus.filter(g => g.status === 'Free').length,
+    total: gpus.length,
+    hasError: gpus.some(g => g.status === 'Error'),
+    clusterId: gpus[0].cluster_id
+  };
+
+  const sortedGPUs = gpus.sort((a, b) => a.gpu_index - b.gpu_index);
+  const gpusWithGroupInfo = groupGPUsByOwnerTeam(sortedGPUs);
   const isSelectionMode = selectedHostId === hostId;
 
   return `
-    <article class="host-card" role="region" aria-label="${hostId} 호스트. ${freeGPUs}개 사용 가능, 총 ${totalGPUs}개 GPU">
-      <div class="host-header">
-        <div class="host-info">
-          <h3 class="host-name">${hostId}</h3>
-          <p class="host-hostname">${gpus[0].cluster_id} cluster</p>
-          <p class="host-gpu-count">GPU: ${freeGPUs}/${totalGPUs} available</p>
-        </div>
-        <div class="host-header-actions">
-          <button class="use-gpu-btn ${isSelectionMode ? 'active' : ''}"
-                  onclick="toggleSelectionMode('${hostId}')"
-                  aria-pressed="${isSelectionMode}"
-                  aria-label="${isSelectionMode ? hostId + ' GPU 선택 취소' : hostId + ' GPU 사용 시작'}">
-            ${isSelectionMode ? 'Cancel Selection' : 'Use GPU'}
-          </button>
-          <span class="host-status ${hasError ? 'offline' : 'online'}"
-                role="status"
-                aria-label="${hasError ? '오류 상태' : '온라인 상태'}">
-            ${hasError ? 'Error' : 'Online'}
-          </span>
-        </div>
-      </div>
-
+    <article class="host-card" role="region" aria-label="${hostId} 호스트. ${stats.free}개 사용 가능, 총 ${stats.total}개 GPU">
+      ${buildHostHeaderHTML(hostId, stats, isSelectionMode)}
       <div class="gpu-grid" role="list" aria-label="${hostId} GPU 목록">
         ${gpusWithGroupInfo.map(node => createGPUCard(node)).join('')}
       </div>
@@ -419,143 +447,155 @@ function createHostCard(hostId, gpus) {
   `;
 }
 
+// GPU 툴팁 내용 생성
+function getGPUTooltipContent(node) {
+  let content = `
+    <div class="tooltip-row">
+      <span class="tooltip-label">GPU:</span>
+      <span class="tooltip-value">${node.node_id}</span>
+    </div>
+    <div class="tooltip-row">
+      <span class="tooltip-label">Host:</span>
+      <span class="tooltip-value">${node.host_id}</span>
+    </div>
+    <div class="tooltip-row">
+      <span class="tooltip-label">Cluster:</span>
+      <span class="tooltip-value">${node.cluster_id}</span>
+    </div>
+    <div class="tooltip-row">
+      <span class="tooltip-label">Status:</span>
+      <span class="tooltip-value">${node.status}</span>
+    </div>
+    <div class="tooltip-row">
+      <span class="tooltip-label">Model:</span>
+      <span class="tooltip-value">${node.gpu_model}</span>
+    </div>
+    <div class="tooltip-row">
+      <span class="tooltip-label">Memory:</span>
+      <span class="tooltip-value">${node.gpu_mem_gb}GB</span>
+    </div>
+  `;
+
+  content += getUsedNodeTooltipContent(node);
+  content += getErrorNodeTooltipContent(node);
+
+  return content;
+}
+
+// Used 상태 노드의 툴팁 내용
+function getUsedNodeTooltipContent(node) {
+  if (node.status !== 'Used') return '';
+
+  let content = '';
+  if (node.owner) {
+    content += `
+      <div class="tooltip-row">
+        <span class="tooltip-label">Owner:</span>
+        <span class="tooltip-value">${node.owner}</span>
+      </div>
+    `;
+  }
+  if (node.team) {
+    content += `
+      <div class="tooltip-row">
+        <span class="tooltip-label">Team:</span>
+        <span class="tooltip-value">${node.team}</span>
+      </div>
+    `;
+  }
+  if (node.allow_expand) {
+    content += `
+      <div class="tooltip-row">
+        <span class="tooltip-label">Expansion:</span>
+        <span class="tooltip-value">Allowed</span>
+      </div>
+    `;
+  }
+  return content;
+}
+
+// Error 상태 노드의 툴팁 내용
+function getErrorNodeTooltipContent(node) {
+  if (node.status !== 'Error' || !node.last_error) return '';
+
+  return `
+    <div class="tooltip-row">
+      <span class="tooltip-label">Error:</span>
+      <span class="tooltip-value">${node.last_error}</span>
+    </div>
+  `;
+}
+
+// GPU 카드 HTML 생성
+function buildGPUCardHTML(node, classes, groupAttr, tooltipContent, ariaLabel, isInSelectionMode) {
+  return `
+    <div id="gpu-${node.node_id}"
+         class="gpu-card ${classes}"
+         ${groupAttr}
+         tabindex="0"
+         role="listitem"
+         aria-label="${ariaLabel}">
+      <div class="tooltip">${tooltipContent}</div>
+      <div class="gpu-header">
+        <span>GPU ${node.gpu_index}</span>
+        ${getStatusIcon(node.status)}
+      </div>
+      ${getGPUCardContent(node, isInSelectionMode)}
+    </div>
+  `;
+}
+
+// GPU 카드 내용 생성
+function getGPUCardContent(node, isInSelectionMode) {
+  if (node.status === 'Used') {
+    return `
+      <div class="gpu-details">
+        <div class="gpu-detail-row">
+          <span>Model:</span>
+          <span>${node.gpu_model}</span>
+        </div>
+        <div class="gpu-detail-row">
+          <span>Mem:</span>
+          <span>${node.gpu_mem_gb}GB</span>
+        </div>
+        ${node.owner ? `<div class="gpu-owner">${node.owner}</div>` : ''}
+      </div>
+      ${node.allow_expand ? '<div class="expansion-indicator" title="Expansion allowed"></div>' : ''}
+    `;
+  }
+
+  if (node.status === 'Free') {
+    return `<div class="gpu-available">${isInSelectionMode ? 'Click to Select' : 'Available'}</div>`;
+  }
+
+  if (node.status === 'Error') {
+    return `
+      <div class="gpu-error-text">
+        <div style="font-weight: bold;">ERROR</div>
+        ${node.last_error ? `<div class="gpu-error-message">${node.last_error}</div>` : ''}
+      </div>
+    `;
+  }
+
+  return '';
+}
+
 // 개별 GPU 카드 생성
 function createGPUCard(node) {
   const isSelected = selectedNodes.has(node.node_id);
-
-  // 그룹 클래스 추가
-  let groupClass = '';
-  let groupAttr = '';
-  if (node.groupPosition) {
-    groupClass = `grouped-${node.groupPosition}`;
-    groupAttr = `data-group="${node.owner}-${node.team}"`;
-  }
-
-  // 선택 모드일 때 해당 호스트의 Free GPU만 강조
   const isInSelectionMode = selectedHostId === node.host_id;
+
+  const groupClass = node.groupPosition ? `grouped-${node.groupPosition}` : '';
+  const groupAttr = node.groupPosition ? `data-group="${node.owner}-${node.team}"` : '';
   const selectionModeClass = isInSelectionMode && node.status === 'Free' ? 'selection-mode' : '';
 
-  // 툴팁 내용 생성
-  const getTooltipContent = () => {
-    let content = `
-      <div class="tooltip-row">
-        <span class="tooltip-label">GPU:</span>
-        <span class="tooltip-value">${node.node_id}</span>
-      </div>
-      <div class="tooltip-row">
-        <span class="tooltip-label">Host:</span>
-        <span class="tooltip-value">${node.host_id}</span>
-      </div>
-      <div class="tooltip-row">
-        <span class="tooltip-label">Cluster:</span>
-        <span class="tooltip-value">${node.cluster_id}</span>
-      </div>
-      <div class="tooltip-row">
-        <span class="tooltip-label">Status:</span>
-        <span class="tooltip-value">${node.status}</span>
-      </div>
-      <div class="tooltip-row">
-        <span class="tooltip-label">Model:</span>
-        <span class="tooltip-value">${node.gpu_model}</span>
-      </div>
-      <div class="tooltip-row">
-        <span class="tooltip-label">Memory:</span>
-        <span class="tooltip-value">${node.gpu_mem_gb}GB</span>
-      </div>
-    `;
-
-    if (node.status === 'Used') {
-      if (node.owner) {
-        content += `
-          <div class="tooltip-row">
-            <span class="tooltip-label">Owner:</span>
-            <span class="tooltip-value">${node.owner}</span>
-          </div>
-        `;
-      }
-      if (node.team) {
-        content += `
-          <div class="tooltip-row">
-            <span class="tooltip-label">Team:</span>
-            <span class="tooltip-value">${node.team}</span>
-          </div>
-        `;
-      }
-      if (node.allow_expand) {
-        content += `
-          <div class="tooltip-row">
-            <span class="tooltip-label">Expansion:</span>
-            <span class="tooltip-value">Allowed</span>
-          </div>
-        `;
-      }
-    }
-
-    if (node.status === 'Error' && node.last_error) {
-      content += `
-        <div class="tooltip-row">
-          <span class="tooltip-label">Error:</span>
-          <span class="tooltip-value">${node.last_error}</span>
-        </div>
-      `;
-    }
-
-    return content;
-  };
-
+  const classes = `status-${node.status} ${isSelected ? 'selected' : ''} ${groupClass} ${selectionModeClass}`;
   const statusText = node.status === 'Free' ? '사용 가능' :
                      node.status === 'Used' ? `사용 중 (${node.owner || '소유자 없음'})` :
                      node.status === 'Error' ? '오류' : '예약됨';
   const ariaLabel = `GPU ${node.gpu_index}, ${node.gpu_model} ${node.gpu_mem_gb}GB, ${statusText}`;
 
-  return `
-    <div id="gpu-${node.node_id}"
-         class="gpu-card status-${node.status} ${isSelected ? 'selected' : ''} ${groupClass} ${selectionModeClass}"
-         ${groupAttr}
-         tabindex="0"
-         role="listitem"
-         aria-label="${ariaLabel}">
-
-      <!-- Tooltip -->
-      <div class="tooltip">
-        ${getTooltipContent()}
-      </div>
-
-      <div class="gpu-header">
-        <span>GPU ${node.gpu_index}</span>
-        ${getStatusIcon(node.status)}
-      </div>
-
-      ${node.status === 'Used' ? `
-        <div class="gpu-details">
-          <div class="gpu-detail-row">
-            <span>Model:</span>
-            <span>${node.gpu_model}</span>
-          </div>
-          <div class="gpu-detail-row">
-            <span>Mem:</span>
-            <span>${node.gpu_mem_gb}GB</span>
-          </div>
-          ${node.owner ? `<div class="gpu-owner">${node.owner}</div>` : ''}
-        </div>
-      ` : ''}
-
-      ${node.status === 'Free' ? `
-        <div class="gpu-available">${isInSelectionMode ? 'Click to Select' : 'Available'}</div>
-      ` : ''}
-
-      ${node.status === 'Error' ? `
-        <div class="gpu-error-text">
-          <div style="font-weight: bold;">ERROR</div>
-          ${node.last_error ? `<div class="gpu-error-message">${node.last_error}</div>` : ''}
-        </div>
-      ` : ''}
-
-      ${node.allow_expand && node.status === 'Used' ? `
-        <div class="expansion-indicator" title="Expansion allowed"></div>
-      ` : ''}
-    </div>
-  `;
+  return buildGPUCardHTML(node, classes, groupAttr, getGPUTooltipContent(node), ariaLabel, isInSelectionMode);
 }
 
 // 상태 아이콘 SVG
@@ -618,27 +658,24 @@ function executeExpansion() {
   showAllocationModal();
 }
 
-// 할당 모달 표시
-function showAllocationModal() {
-  const modal = document.getElementById('node-modal');
-  const title = document.getElementById('modal-title');
-  const body = document.getElementById('modal-body');
-
-  title.textContent = `Allocate ${selectedNodes.size} GPU(s)`;
-
+// 선택된 GPU 목록 HTML 생성
+function buildSelectedGPUsList() {
   const nodesList = Array.from(selectedNodes).map(nodeId => {
     const node = allData.nodes.nodes.find(n => n.node_id === nodeId);
     return `<li>${nodeId} (${node.gpu_model} ${node.gpu_mem_gb}GB)</li>`;
   }).join('');
 
-  body.innerHTML = `
+  return `
     <div class="info-section">
       <h3>Selected GPUs</h3>
-      <ul style="margin-left: 1.5rem; color: #374151;">
-        ${nodesList}
-      </ul>
+      <ul style="margin-left: 1.5rem; color: #374151;">${nodesList}</ul>
     </div>
+  `;
+}
 
+// 할당 폼 HTML 생성
+function buildAllocationFormHTML() {
+  return `
     <div class="info-section">
       <h3>Allocation Information</h3>
       <form id="multi-allocate-form">
@@ -662,64 +699,67 @@ function showAllocationModal() {
       <div id="multi-alloc-message"></div>
     </div>
   `;
+}
 
+// 다중 GPU 할당 처리
+async function handleMultiAllocation(userId, password, team, messageDiv) {
+  if (!userId || !password) {
+    messageDiv.innerHTML = '<div class="error-message">Please enter User ID and Password</div>';
+    return;
+  }
+
+  try {
+    const allocations = Array.from(selectedNodes).map(nodeId =>
+      fetch(`/api/nodes/${nodeId}/allocate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, password, team })
+      }).then(res => res.json())
+    );
+
+    const results = await Promise.all(allocations);
+    handleAllocationResults(results, messageDiv);
+  } catch (error) {
+    messageDiv.innerHTML = '<div class="error-message">Failed to allocate GPUs</div>';
+  }
+}
+
+// 할당 결과 처리
+function handleAllocationResults(results, messageDiv) {
+  const allSuccess = results.every(r => r.success);
+
+  if (allSuccess) {
+    messageDiv.innerHTML = '<div class="success-message">All GPUs allocated successfully!</div>';
+    setTimeout(() => {
+      closeModal();
+      selectedNodes.clear();
+      updateExpandPanel();
+      selectedHostId = null;
+      loadData();
+    }, 1500);
+  } else {
+    const errors = results.filter(r => !r.success).map(r => r.error).join(', ');
+    messageDiv.innerHTML = `<div class="error-message">Some allocations failed: ${errors}</div>`;
+  }
+}
+
+// 할당 모달 표시
+function showAllocationModal() {
+  const modal = document.getElementById('node-modal');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+
+  title.textContent = `Allocate ${selectedNodes.size} GPU(s)`;
+  body.innerHTML = buildSelectedGPUsList() + buildAllocationFormHTML();
   modal.style.display = 'block';
 
-  // 폼 제출 이벤트
   document.getElementById('multi-allocate-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const userId = document.getElementById('multi-alloc-user-id').value.trim();
     const password = document.getElementById('multi-alloc-password').value;
     const team = document.getElementById('multi-alloc-team').value.trim();
     const messageDiv = document.getElementById('multi-alloc-message');
-
-    console.log('Allocating GPUs:', {
-      userId,
-      team,
-      nodeCount: selectedNodes.size,
-      nodes: Array.from(selectedNodes)
-    });
-
-    if (!userId || !password) {
-      messageDiv.innerHTML = '<div class="error-message">Please enter User ID and Password</div>';
-      return;
-    }
-
-    try {
-      // 각 GPU를 개별적으로 할당
-      const allocations = Array.from(selectedNodes).map(async (nodeId) => {
-        console.log(`Allocating ${nodeId} to ${userId}...`);
-        const response = await fetch(`/api/nodes/${nodeId}/allocate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, password, team })
-        });
-        const result = await response.json();
-        console.log(`Result for ${nodeId}:`, result);
-        return result;
-      });
-
-      const results = await Promise.all(allocations);
-      const allSuccess = results.every(r => r.success);
-
-      if (allSuccess) {
-        messageDiv.innerHTML = '<div class="success-message">All GPUs allocated successfully!</div>';
-        setTimeout(() => {
-          closeModal();
-          selectedNodes.clear();
-          updateExpandPanel();
-          selectedHostId = null;
-          loadData();
-        }, 1500);
-      } else {
-        const errors = results.filter(r => !r.success).map(r => r.error).join(', ');
-        messageDiv.innerHTML = `<div class="error-message">Some allocations failed: ${errors}</div>`;
-      }
-    } catch (error) {
-      console.error('Allocation error:', error);
-      messageDiv.innerHTML = '<div class="error-message">Failed to allocate GPUs</div>';
-    }
+    await handleMultiAllocation(userId, password, team, messageDiv);
   });
 }
 
@@ -730,17 +770,9 @@ function cancelExpansion() {
   renderHosts();
 }
 
-// 노드 모달 표시
-function showNodeModal(node) {
-  const modal = document.getElementById('node-modal');
-  const title = document.getElementById('modal-title');
-  const body = document.getElementById('modal-body');
-
-  title.textContent = `GPU: ${node.node_id}`;
-
-  const cluster = allData.clusters.clusters.find(c => c.id === node.cluster_id);
-
-  let content = `
+// GPU 정보 섹션 HTML 생성
+function buildNodeInfoSection(node, cluster) {
+  return `
     <div class="info-section">
       <h3>GPU Information</h3>
       <p><strong>Host:</strong> ${node.host_id}</p>
@@ -755,19 +787,28 @@ function showNodeModal(node) {
       <p><strong>Expand Permission:</strong> ${node.allow_expand ? 'Yes' : 'No'}</p>
     </div>
   `;
+}
 
-  if (node.status === 'Free') {
-    content += createFreeNodeActions(node);
-  } else if (node.status === 'Used') {
-    content += createUsedNodeActions(node, cluster);
-  } else if (node.status === 'Error') {
-    content += createErrorNodeActions(node);
-  }
+// 상태별 액션 섹션 가져오기
+function getNodeActionsSection(node, cluster) {
+  if (node.status === 'Free') return createFreeNodeActions(node);
+  if (node.status === 'Used') return createUsedNodeActions(node, cluster);
+  if (node.status === 'Error') return createErrorNodeActions(node);
+  return '';
+}
 
-  body.innerHTML = content;
+// 노드 모달 표시
+function showNodeModal(node) {
+  const modal = document.getElementById('node-modal');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+
+  title.textContent = `GPU: ${node.node_id}`;
+
+  const cluster = allData.clusters.clusters.find(c => c.id === node.cluster_id);
+  body.innerHTML = buildNodeInfoSection(node, cluster) + getNodeActionsSection(node, cluster);
   modal.style.display = 'block';
 
-  // 폼 제출 이벤트 설정
   setupModalEventListeners(node, cluster);
 }
 
@@ -798,12 +839,33 @@ function createFreeNodeActions(node) {
   `;
 }
 
-// Used 노드 액션
-function createUsedNodeActions(node, cluster) {
-  const notebookUrl = cluster && cluster.notebook_url_template
+// 노트북 URL 생성
+function getNotebookUrl(node, cluster) {
+  return cluster && cluster.notebook_url_template
     ? cluster.notebook_url_template.replace('{node_id}', node.host_id)
     : '';
+}
 
+// Used 노드 액션 버튼 생성
+function buildUsedNodeActionButtons(node, notebookUrl) {
+  const notebookBtn = notebookUrl
+    ? `<button type="button" class="btn btn-success" onclick="openNotebook('${notebookUrl}')">Open Notebook (${node.host_id})</button>`
+    : '';
+  const expandBtnText = node.allow_expand ? 'Disable Expand' : 'Enable Expand';
+  return `
+    <div class="action-buttons">
+      ${notebookBtn}
+      <button type="button" class="btn btn-secondary" onclick="releaseNode('${node.node_id}')">Release GPU</button>
+      <button type="button" class="btn btn-primary" onclick="toggleExpand('${node.node_id}', ${!node.allow_expand})">
+        ${expandBtnText}
+      </button>
+    </div>
+  `;
+}
+
+// Used 노드 액션
+function createUsedNodeActions(node, cluster) {
+  const notebookUrl = getNotebookUrl(node, cluster);
   return `
     <div class="info-section">
       <h3>GPU Actions</h3>
@@ -816,13 +878,7 @@ function createUsedNodeActions(node, cluster) {
           <label>Password:</label>
           <input type="password" id="action-password" required>
         </div>
-        <div class="action-buttons">
-          ${notebookUrl ? `<button type="button" class="btn btn-success" onclick="openNotebook('${notebookUrl}')">Open Notebook (${node.host_id})</button>` : ''}
-          <button type="button" class="btn btn-secondary" onclick="releaseNode('${node.node_id}')">Release GPU</button>
-          <button type="button" class="btn btn-primary" onclick="toggleExpand('${node.node_id}', ${!node.allow_expand})">
-            ${node.allow_expand ? 'Disable Expand' : 'Enable Expand'}
-          </button>
-        </div>
+        ${buildUsedNodeActionButtons(node, notebookUrl)}
       </form>
       <div id="action-message"></div>
     </div>
@@ -853,71 +909,72 @@ function createErrorNodeActions(node) {
   `;
 }
 
+// GPU 할당 폼 리스너 설정
+async function handleAllocateFormSubmit(e, nodeId) {
+  e.preventDefault();
+
+  const userId = document.getElementById('alloc-user-id').value;
+  const password = document.getElementById('alloc-password').value;
+  const team = document.getElementById('alloc-team').value;
+  const messageDiv = document.getElementById('alloc-message');
+
+  try {
+    const response = await fetch(`/api/nodes/${nodeId}/allocate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, password, team })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      messageDiv.innerHTML = '<div class="success-message">GPU allocated successfully!</div>';
+      setTimeout(() => { closeModal(); loadData(); }, 1500);
+    } else {
+      messageDiv.innerHTML = `<div class="error-message">${result.error}</div>`;
+    }
+  } catch (error) {
+    messageDiv.innerHTML = '<div class="error-message">Failed to allocate GPU</div>';
+  }
+}
+
+// 에러 신고 폼 리스너 설정
+async function handleErrorFormSubmit(e, nodeId) {
+  e.preventDefault();
+
+  const userId = document.getElementById('error-user-id').value;
+  const message = document.getElementById('error-message').value;
+  const messageDiv = document.getElementById('error-response');
+
+  try {
+    const response = await fetch(`/api/nodes/${nodeId}/call-admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, message })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      messageDiv.innerHTML = '<div class="success-message">Admin has been notified</div>';
+    } else {
+      messageDiv.innerHTML = `<div class="error-message">${result.error}</div>`;
+    }
+  } catch (error) {
+    messageDiv.innerHTML = '<div class="error-message">Failed to notify admin</div>';
+  }
+}
+
 // 모달 이벤트 리스너 설정
 function setupModalEventListeners(node, cluster) {
-  // Allocate 폼
   const allocForm = document.getElementById('allocate-form');
   if (allocForm) {
-    allocForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const userId = document.getElementById('alloc-user-id').value;
-      const password = document.getElementById('alloc-password').value;
-      const team = document.getElementById('alloc-team').value;
-      const messageDiv = document.getElementById('alloc-message');
-
-      try {
-        const response = await fetch(`/api/nodes/${node.node_id}/allocate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, password, team })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          messageDiv.innerHTML = '<div class="success-message">GPU allocated successfully!</div>';
-          setTimeout(() => {
-            closeModal();
-            loadData();
-          }, 1500);
-        } else {
-          messageDiv.innerHTML = `<div class="error-message">${result.error}</div>`;
-        }
-      } catch (error) {
-        messageDiv.innerHTML = '<div class="error-message">Failed to allocate GPU</div>';
-      }
-    });
+    allocForm.addEventListener('submit', (e) => handleAllocateFormSubmit(e, node.node_id));
   }
 
-  // Error 폼
   const errorForm = document.getElementById('error-form');
   if (errorForm) {
-    errorForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const userId = document.getElementById('error-user-id').value;
-      const message = document.getElementById('error-message').value;
-      const messageDiv = document.getElementById('error-response');
-
-      try {
-        const response = await fetch(`/api/nodes/${node.node_id}/call-admin`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, message })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          messageDiv.innerHTML = '<div class="success-message">Admin has been notified</div>';
-        } else {
-          messageDiv.innerHTML = `<div class="error-message">${result.error}</div>`;
-        }
-      } catch (error) {
-        messageDiv.innerHTML = '<div class="error-message">Failed to notify admin</div>';
-      }
-    });
+    errorForm.addEventListener('submit', (e) => handleErrorFormSubmit(e, node.node_id));
   }
 }
 
@@ -926,104 +983,86 @@ function openNotebook(url) {
   window.open(url, '_blank');
 }
 
-// 노드 재시작
-async function restartNode(nodeId) {
-  const userId = document.getElementById('action-user-id').value;
-  const password = document.getElementById('action-password').value;
-  const messageDiv = document.getElementById('action-message');
+// 액션 폼 인증 정보 가져오기
+function getActionFormCredentials() {
+  return {
+    userId: document.getElementById('action-user-id').value,
+    password: document.getElementById('action-password').value,
+    messageDiv: document.getElementById('action-message')
+  };
+}
 
+// 인증 정보 유효성 검증
+function validateCredentials(userId, password, messageDiv) {
   if (!userId || !password) {
     messageDiv.innerHTML = '<div class="error-message">Please enter User ID and Password</div>';
-    return;
+    return false;
   }
+  return true;
+}
 
+// API 요청 실행 및 응답 처리
+async function executeNodeAction(url, body, messageDiv, successMessage, onSuccess) {
   try {
-    const response = await fetch(`/api/nodes/${nodeId}/restart`, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, password })
+      body: JSON.stringify(body)
     });
 
     const result = await response.json();
 
     if (result.success) {
-      messageDiv.innerHTML = '<div class="success-message">Restart command sent successfully</div>';
+      messageDiv.innerHTML = `<div class="success-message">${successMessage}</div>`;
+      if (onSuccess) setTimeout(onSuccess, 1500);
     } else {
       messageDiv.innerHTML = `<div class="error-message">${result.error}</div>`;
     }
   } catch (error) {
-    messageDiv.innerHTML = '<div class="error-message">Failed to send restart command</div>';
+    messageDiv.innerHTML = `<div class="error-message">Failed to execute action</div>`;
   }
+}
+
+// 노드 재시작
+async function restartNode(nodeId) {
+  const { userId, password, messageDiv } = getActionFormCredentials();
+  if (!validateCredentials(userId, password, messageDiv)) return;
+
+  await executeNodeAction(
+    `/api/nodes/${nodeId}/restart`,
+    { userId, password },
+    messageDiv,
+    'Restart command sent successfully'
+  );
 }
 
 // 노드 해제
 async function releaseNode(nodeId) {
-  const userId = document.getElementById('action-user-id').value;
-  const password = document.getElementById('action-password').value;
-  const messageDiv = document.getElementById('action-message');
-
-  if (!userId || !password) {
-    messageDiv.innerHTML = '<div class="error-message">Please enter User ID and Password</div>';
-    return;
-  }
-
+  const { userId, password, messageDiv } = getActionFormCredentials();
+  if (!validateCredentials(userId, password, messageDiv)) return;
   if (!confirm('Are you sure you want to release this GPU?')) return;
 
-  try {
-    const response = await fetch(`/api/nodes/${nodeId}/release`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, password })
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      messageDiv.innerHTML = '<div class="success-message">GPU released successfully</div>';
-      setTimeout(() => {
-        closeModal();
-        loadData();
-      }, 1500);
-    } else {
-      messageDiv.innerHTML = `<div class="error-message">${result.error}</div>`;
-    }
-  } catch (error) {
-    messageDiv.innerHTML = '<div class="error-message">Failed to release GPU</div>';
-  }
+  await executeNodeAction(
+    `/api/nodes/${nodeId}/release`,
+    { userId, password },
+    messageDiv,
+    'GPU released successfully',
+    () => { closeModal(); loadData(); }
+  );
 }
 
 // 확장 허가 토글
 async function toggleExpand(nodeId, allowExpand) {
-  const userId = document.getElementById('action-user-id').value;
-  const password = document.getElementById('action-password').value;
-  const messageDiv = document.getElementById('action-message');
+  const { userId, password, messageDiv } = getActionFormCredentials();
+  if (!validateCredentials(userId, password, messageDiv)) return;
 
-  if (!userId || !password) {
-    messageDiv.innerHTML = '<div class="error-message">Please enter User ID and Password</div>';
-    return;
-  }
-
-  try {
-    const response = await fetch(`/api/nodes/${nodeId}/toggle-expand`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, password, allowExpand })
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      messageDiv.innerHTML = '<div class="success-message">Expand permission updated</div>';
-      setTimeout(() => {
-        closeModal();
-        loadData();
-      }, 1500);
-    } else {
-      messageDiv.innerHTML = `<div class="error-message">${result.error}</div>`;
-    }
-  } catch (error) {
-    messageDiv.innerHTML = '<div class="error-message">Failed to update expand permission</div>';
-  }
+  await executeNodeAction(
+    `/api/nodes/${nodeId}/toggle-expand`,
+    { userId, password, allowExpand },
+    messageDiv,
+    'Expand permission updated',
+    () => { closeModal(); loadData(); }
+  );
 }
 
 // 모달 닫기
