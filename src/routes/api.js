@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { loadAllData, updateNode, updateNodes } = require('../utils/yamlHandler');
+const { getAllData, updateNode, updateNodes } = require('../utils/dataService');
 const { authenticateUser, verifyNodeOwner, isAdmin } = require('../utils/auth');
 const { logToSend, logToAudit } = require('../utils/logger');
 
 // 전체 데이터 조회
 router.get('/data', (req, res) => {
-  const data = loadAllData();
+  const data = getAllData();
   res.json(data);
 });
 
@@ -21,7 +21,7 @@ router.post('/nodes/:nodeId/allocate', async (req, res) => {
   }
 
   // 노드 상태 확인
-  const data = loadAllData();
+  const data = getAllData();
   const node = data.nodes.nodes.find(n => n.node_id === nodeId);
 
   if (!node) {
@@ -33,7 +33,7 @@ router.post('/nodes/:nodeId/allocate', async (req, res) => {
   }
 
   // 노드 할당 - userId와 password를 저장
-  const success = updateNode(nodeId, {
+  const success = await updateNode(nodeId, {
     status: 'Used',
     owner: userId,
     team: team || null,
@@ -60,7 +60,7 @@ router.post('/nodes/:nodeId/restart', async (req, res) => {
   }
 
   // 노드 확인
-  const data = loadAllData();
+  const data = getAllData();
   const node = data.nodes.nodes.find(n => n.node_id === nodeId);
 
   if (!node) {
@@ -94,7 +94,7 @@ router.post('/nodes/:nodeId/release', async (req, res) => {
   }
 
   // 노드 확인
-  const data = loadAllData();
+  const data = getAllData();
   const node = data.nodes.nodes.find(n => n.node_id === nodeId);
 
   if (!node) {
@@ -111,7 +111,7 @@ router.post('/nodes/:nodeId/release', async (req, res) => {
   }
 
   // 노드 해제
-  const success = updateNode(nodeId, {
+  const success = await updateNode(nodeId, {
     status: 'Free',
     owner: null,
     team: null,
@@ -138,7 +138,7 @@ router.post('/nodes/:nodeId/toggle-expand', async (req, res) => {
   }
 
   // 노드 확인
-  const data = loadAllData();
+  const data = getAllData();
   const node = data.nodes.nodes.find(n => n.node_id === nodeId);
 
   if (!node) {
@@ -155,7 +155,7 @@ router.post('/nodes/:nodeId/toggle-expand', async (req, res) => {
   }
 
   // 확장 허가 토글
-  const success = updateNode(nodeId, {
+  const success = await updateNode(nodeId, {
     allow_expand: allowExpand
   });
 
@@ -177,7 +177,7 @@ router.post('/nodes/expand', async (req, res) => {
   }
 
   // 노드 상태 확인
-  const data = loadAllData();
+  const data = getAllData();
   const nodes = data.nodes.nodes.filter(n => nodeIds.includes(n.node_id));
 
   // 모든 노드가 Free인지 확인
@@ -188,7 +188,7 @@ router.post('/nodes/expand', async (req, res) => {
   }
 
   // 확장 실행 - 모든 노드에 같은 userId, password, team 설정
-  const success = updateNodes(nodeIds, {
+  const success = await updateNodes(nodeIds, {
     status: 'Used',
     owner: userId,
     team: team || null,

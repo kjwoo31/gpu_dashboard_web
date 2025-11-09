@@ -20,8 +20,8 @@ nodes:
     gpu_index: 1
     gpu_model: A100
     gpu_mem_gb: 80
-    status: Used
-    owner: alice
+    status: Free
+    owner: null
     team: ML Team
     bmc_ip: null
     labels:
